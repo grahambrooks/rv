@@ -1,0 +1,43 @@
+name: Generate Visualization
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Build rv
+        run: cargo build --release
+
+      - name: Generate visualization
+        run: ./target/release/rv . -o assets/structure.svg -W 800 -H 600
+
+      - name: Update README with new SVG
+        run: |
+          if ! grep -q "structure.svg" README.md; then
+            echo "SVG reference not found in README, skipping update"
+          else
+            echo "SVG generated successfully"
+          fi
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add assets/structure.svg
+          git diff --staged --quiet || git commit -m "Update project structure visualization"
+          git push

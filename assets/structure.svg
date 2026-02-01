@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect width="100%" height="100%" fill="#1a1a2e"/>
+  <style>
+    .edge { stroke: #404060; stroke-width: 1; stroke-opacity: 0.6; }
+    .node { stroke: #fff; stroke-width: 1; stroke-opacity: 0.3; }
+    .label { font-family: monospace; font-size: 10px; fill: #e0e0e0; }
+    .dir-label { font-family: monospace; font-size: 11px; fill: #fff; font-weight: bold; }
+  </style>
+  <g class="edges">
+    <line class="edge" x1="400" y1="300" x2="550" y2="200"/>
+    <line class="edge" x1="400" y1="300" x2="550" y2="300"/>
+    <line class="edge" x1="400" y1="300" x2="550" y2="400"/>
+    <line class="edge" x1="400" y1="300" x2="250" y2="200"/>
+    <line class="edge" x1="400" y1="300" x2="250" y2="400"/>
+  </g>
+  <g class="nodes">
+    <circle class="node" cx="400" cy="300" r="10" fill="#4CAF50"/>
+    <circle class="node" cx="550" cy="200" r="25" fill="#FF7043"/>
+    <circle class="node" cx="550" cy="300" r="20" fill="#FF7043"/>
+    <circle class="node" cx="550" cy="400" r="22" fill="#FF7043"/>
+    <circle class="node" cx="250" cy="200" r="18" fill="#FF7043"/>
+    <circle class="node" cx="250" cy="400" r="24" fill="#FF7043"/>
+  </g>
+  <g class="labels">
+    <text class="dir-label" x="400" y="325" text-anchor="middle">src</text>
+    <text class="label" x="550" y="240" text-anchor="middle">svg.rs</text>
+    <text class="label" x="550" y="330" text-anchor="middle">graph.rs</text>
+    <text class="label" x="550" y="435" text-anchor="middle">layout.rs</text>
+    <text class="label" x="250" y="230" text-anchor="middle">main.rs</text>
+    <text class="label" x="250" y="435" text-anchor="middle">scanner.rs</text>
+  </g>
+  <g class="legend">
+    <rect x="695" y="15" width="90" height="172" fill="#1a1a2e" fill-opacity="0.8" rx="4"/>
+    <circle cx="705" cy="25" r="5" fill="#4CAF50"/>
+    <text x="718" y="29" class="label">Directory</text>
+    <circle cx="705" cy="43" r="5" fill="#FF7043"/>
+    <text x="718" y="47" class="label">Rust</text>
+    <circle cx="705" cy="61" r="5" fill="#FFEB3B"/>
+    <text x="718" y="65" class="label">JS</text>
+    <circle cx="705" cy="79" r="5" fill="#2196F3"/>
+    <text x="718" y="83" class="label">TS</text>
+    <circle cx="705" cy="97" r="5" fill="#3F51B5"/>
+    <text x="718" y="101" class="label">Python</text>
+    <circle cx="705" cy="115" r="5" fill="#00BCD4"/>
+    <text x="718" y="119" class="label">Go</text>
+    <circle cx="705" cy="133" r="5" fill="#9E9E9E"/>
+    <text x="718" y="137" class="label">Markdown</text>
+    <circle cx="705" cy="151" r="5" fill="#9C27B0"/>
+    <text x="718" y="155" class="label">Config</text>
+    <circle cx="705" cy="169" r="5" fill="#BDBDBD"/>
+    <text x="718" y="173" class="label">Other</text>
+  </g>
+</svg>
