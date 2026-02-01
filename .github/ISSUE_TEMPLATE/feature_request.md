@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for rv-viz
+about: Suggest an idea for rv
 title: ''
 labels: enhancement
 assignees: ''

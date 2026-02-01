@@ -8,7 +8,7 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "rv-viz")]
+#[command(name = "rv")]
 #[command(about = "Generate SVG visualizations of directory structures")]
 struct Args {
     /// Directory to visualize
