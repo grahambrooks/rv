@@ -1,91 +1,750 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>rv — Interactive Directory Visualization</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+  #container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  /* Search bar */
+  #search-bar {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #search-input {
+    background: rgba(26, 26, 46, 0.92);
+    border: 1px solid #404060;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-family: monospace;
+    font-size: 14px;
+    padding: 8px 14px;
+    width: 320px;
+    outline: none;
+    backdrop-filter: blur(8px);
+  }
+  #search-input:focus {
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 2px rgba(108,99,255,0.25);
+  }
+  #search-input::placeholder {
+    color: #666;
+  }
+  #search-count {
+    font-size: 12px;
+    color: #888;
+    min-width: 60px;
+  }
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(20, 20, 40, 0.95);
+    border: 1px solid #505070;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #e0e0e0;
+    max-width: 400px;
+    z-index: 200;
+    display: none;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  #tooltip .tt-name {
+    font-weight: bold;
+    font-size: 13px;
+    color: #fff;
+    margin-bottom: 2px;
+  }
+  #tooltip .tt-path {
+    color: #888;
+    font-size: 11px;
+    word-break: break-all;
+  }
+  #tooltip .tt-detail {
+    margin-top: 4px;
+    color: #aaa;
+  }
+  #tooltip .tt-detail span {
+    color: #ccc;
+  }
+  #tooltip .tt-hint {
+    margin-top: 6px;
+    font-size: 10px;
+    color: #666;
+    font-style: italic;
+  }
+  /* Controls help */
+  #controls-help {
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    z-index: 100;
+    font-size: 11px;
+    color: #555;
+    background: rgba(26,26,46,0.85);
+    border: 1px solid #303050;
+    border-radius: 6px;
+    padding: 8px 12px;
+    line-height: 1.7;
+    backdrop-filter: blur(8px);
+  }
+  #controls-help kbd {
+    background: #2a2a4a;
+    border: 1px solid #404060;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    color: #999;
+  }
+  /* SVG styles */
+  .edge { stroke: #7878a0; stroke-width: 1.5; stroke-opacity: 0.8; }
+  .edge.highlighted { stroke: #6c63ff; stroke-width: 2.5; stroke-opacity: 1; }
+  .edge.dimmed { stroke-opacity: 0.08; }
+  .node { stroke: #fff; stroke-width: 1; stroke-opacity: 0.3; cursor: pointer; transition: stroke-opacity 0.15s; }
+  .node:hover { stroke-opacity: 0.8; stroke-width: 2; }
+  .node.highlighted { stroke: #6c63ff; stroke-width: 2.5; stroke-opacity: 1; filter: drop-shadow(0 0 6px rgba(108,99,255,0.5)); }
+  .node.search-match { stroke: #ffeb3b; stroke-width: 3; stroke-opacity: 1; filter: drop-shadow(0 0 8px rgba(255,235,59,0.6)); }
+  .node.dimmed { opacity: 0.15; }
+  .node.collapsed-dir { stroke: #ff5722; stroke-width: 2; stroke-dasharray: 3,2; stroke-opacity: 0.8; }
+  .label, .dir-label { font-family: monospace; pointer-events: none; }
+  .label { font-size: 10px; fill: #e0e0e0; }
+  .dir-label { font-size: 11px; fill: #fff; font-weight: bold; }
+  .label.dimmed, .dir-label.dimmed { opacity: 0.1; }
+  .legend-text { font-family: monospace; font-size: 11px; fill: #ccc; }
+</style>
+</head>
+<body>
+
+<div id="search-bar">
+  <input id="search-input" type="text" placeholder="Search files… (Ctrl+F)" autocomplete="off"/>
+  <span id="search-count"></span>
+</div>
+
+<div id="tooltip"></div>
+
+<div id="controls-help">
+  <kbd>Scroll</kbd> Zoom &nbsp; <kbd>Drag</kbd> Pan &nbsp; <kbd>Drag node</kbd> Move &nbsp; <kbd>Click dir</kbd> Collapse/Expand &nbsp; <kbd>Ctrl+F</kbd> Search &nbsp; <kbd>Esc</kbd> Reset
+</div>
+
+<div id="container">
+<svg id="graph-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
   <rect width="100%" height="100%" fill="#1a1a2e"/>
-  <style>
-    .edge { stroke: #404060; stroke-width: 1; stroke-opacity: 0.6; }
-    .node { stroke: #fff; stroke-width: 1; stroke-opacity: 0.3; }
-    .label { font-family: monospace; font-size: 10px; fill: #e0e0e0; }
-    .dir-label { font-family: monospace; font-size: 11px; fill: #fff; font-weight: bold; }
-  </style>
-  <g class="edges">
-    <line class="edge" x1="248.0" y1="287.7" x2="337.2" y2="309.7"/>
-    <line class="edge" x1="248.0" y1="287.7" x2="279.5" y2="341.3"/>
-    <line class="edge" x1="248.0" y1="287.7" x2="234.0" y2="408.1"/>
-    <line class="edge" x1="234.0" y1="408.1" x2="290.7" y2="458.8"/>
-    <line class="edge" x1="290.7" y1="458.8" x2="339.0" y2="494.5"/>
-    <line class="edge" x1="234.0" y1="408.1" x2="168.7" y2="458.8"/>
-    <line class="edge" x1="168.7" y1="458.8" x2="163.3" y2="520.0"/>
-    <line class="edge" x1="168.7" y1="458.8" x2="105.3" y2="453.4"/>
-    <line class="edge" x1="248.0" y1="287.7" x2="142.9" y2="268.5"/>
-    <line class="edge" x1="142.9" y1="268.5" x2="80.0" y2="255.1"/>
-    <line class="edge" x1="248.0" y1="287.7" x2="196.0" y2="324.7"/>
-    <line class="edge" x1="248.0" y1="287.7" x2="211.8" y2="239.2"/>
-    <line class="edge" x1="248.0" y1="287.7" x2="290.7" y2="150.6"/>
-    <line class="edge" x1="290.7" y1="150.6" x2="225.8" y2="146.7"/>
-    <line class="edge" x1="290.7" y1="150.6" x2="243.2" y2="85.0"/>
-    <line class="edge" x1="290.7" y1="150.6" x2="309.5" y2="80.0"/>
-    <line class="edge" x1="290.7" y1="150.6" x2="363.4" y2="118.4"/>
-    <line class="edge" x1="290.7" y1="150.6" x2="351.8" y2="181.7"/>
-    <line class="edge" x1="248.0" y1="287.7" x2="297.2" y2="255.4"/>
+  <g id="pan-zoom-group">
+    <g id="edges-group">
+<line class="edge" x1="243.2" y1="293.2" x2="330.3" y2="308.8" data-from="0" data-to="1" data-idx="0"/>
+<line class="edge" x1="243.2" y1="293.2" x2="276.8" y2="341.6" data-from="0" data-to="2" data-idx="1"/>
+<line class="edge" x1="243.2" y1="293.2" x2="240.3" y2="408.7" data-from="0" data-to="3" data-idx="2"/>
+<line class="edge" x1="240.3" y1="408.7" x2="298.4" y2="451.8" data-from="3" data-to="4" data-idx="3"/>
+<line class="edge" x1="298.4" y1="451.8" x2="347.4" y2="481.1" data-from="4" data-to="5" data-idx="4"/>
+<line class="edge" x1="240.3" y1="408.7" x2="182.6" y2="461.8" data-from="3" data-to="6" data-idx="5"/>
+<line class="edge" x1="182.6" y1="461.8" x2="182.6" y2="520.0" data-from="6" data-to="7" data-idx="6"/>
+<line class="edge" x1="182.6" y1="461.8" x2="122.2" y2="461.9" data-from="6" data-to="8" data-idx="7"/>
+<line class="edge" x1="243.2" y1="293.2" x2="140.9" y2="285.6" data-from="0" data-to="9" data-idx="8"/>
+<line class="edge" x1="140.9" y1="285.6" x2="80.0" y2="279.1" data-from="9" data-to="10" data-idx="9"/>
+<line class="edge" x1="243.2" y1="293.2" x2="197.3" y2="333.2" data-from="0" data-to="11" data-idx="10"/>
+<line class="edge" x1="243.2" y1="293.2" x2="203.3" y2="252.6" data-from="0" data-to="12" data-idx="11"/>
+<line class="edge" x1="243.2" y1="293.2" x2="272.0" y2="150.6" data-from="0" data-to="13" data-idx="12"/>
+<line class="edge" x1="272.0" y1="150.6" x2="218.7" y2="167.9" data-from="13" data-to="14" data-idx="13"/>
+<line class="edge" x1="272.0" y1="150.6" x2="199.2" y2="111.2" data-from="13" data-to="15" data-idx="14"/>
+<line class="edge" x1="272.0" y1="150.6" x2="252.4" y2="80.0" data-from="13" data-to="16" data-idx="15"/>
+<line class="edge" x1="272.0" y1="150.6" x2="310.8" y2="89.6" data-from="13" data-to="17" data-idx="16"/>
+<line class="edge" x1="272.0" y1="150.6" x2="352.8" y2="134.6" data-from="13" data-to="18" data-idx="17"/>
+<line class="edge" x1="272.0" y1="150.6" x2="321.3" y2="184.6" data-from="13" data-to="19" data-idx="18"/>
+<line class="edge" x1="243.2" y1="293.2" x2="288.8" y2="261.1" data-from="0" data-to="20" data-idx="19"/>
+
+    </g>
+    <g id="nodes-group">
+<circle class="node" cx="243.2" cy="293.2" r="8.0" fill="#4CAF50" data-id="0" data-is-dir="true"/>
+<circle class="node" cx="330.3" cy="308.8" r="9.2" fill="#BDBDBD" data-id="1" data-is-dir="false"/>
+<circle class="node" cx="276.8" cy="341.6" r="9.7" fill="#9E9E9E" data-id="2" data-is-dir="false"/>
+<circle class="node" cx="240.3" cy="408.7" r="8.0" fill="#4CAF50" data-id="3" data-is-dir="true"/>
+<circle class="node" cx="298.4" cy="451.8" r="8.0" fill="#4CAF50" data-id="4" data-is-dir="true"/>
+<circle class="node" cx="347.4" cy="481.1" r="9.4" fill="#9C27B0" data-id="5" data-is-dir="false"/>
+<circle class="node" cx="182.6" cy="461.8" r="8.0" fill="#4CAF50" data-id="6" data-is-dir="true"/>
+<circle class="node" cx="182.6" cy="520.0" r="7.0" fill="#9E9E9E" data-id="7" data-is-dir="false"/>
+<circle class="node" cx="122.2" cy="461.9" r="7.6" fill="#9E9E9E" data-id="8" data-is-dir="false"/>
+<circle class="node" cx="140.9" cy="285.6" r="8.0" fill="#4CAF50" data-id="9" data-is-dir="true"/>
+<circle class="node" cx="80.0" cy="279.1" r="16.1" fill="#BDBDBD" data-id="10" data-is-dir="false"/>
+<circle class="node" cx="197.3" cy="333.2" r="5.4" fill="#BDBDBD" data-id="11" data-is-dir="false"/>
+<circle class="node" cx="203.3" cy="252.6" r="13.7" fill="#9E9E9E" data-id="12" data-is-dir="false"/>
+<circle class="node" cx="272.0" cy="150.6" r="8.0" fill="#4CAF50" data-id="13" data-is-dir="true"/>
+<circle class="node" cx="218.7" cy="167.9" r="13.6" fill="#FF7043" data-id="14" data-is-dir="false"/>
+<circle class="node" cx="199.2" cy="111.2" r="14.7" fill="#FF7043" data-id="15" data-is-dir="false"/>
+<circle class="node" cx="252.4" cy="80.0" r="16.8" fill="#FF7043" data-id="16" data-is-dir="false"/>
+<circle class="node" cx="310.8" cy="89.6" r="30.0" fill="#FF7043" data-id="17" data-is-dir="false"/>
+<circle class="node" cx="352.8" cy="134.6" r="13.1" fill="#FF7043" data-id="18" data-is-dir="false"/>
+<circle class="node" cx="321.3" cy="184.6" r="12.9" fill="#FF7043" data-id="19" data-is-dir="false"/>
+<circle class="node" cx="288.8" cy="261.1" r="6.3" fill="#9C27B0" data-id="20" data-is-dir="false"/>
+
+    </g>
+    <g id="labels-group">
+<text class="dir-label" x="243.2" y="313.2" text-anchor="middle" data-label-for="0">rv</text>
+<text class="dir-label" x="240.3" y="428.7" text-anchor="middle" data-label-for="3">.github</text>
+<text class="dir-label" x="298.4" y="471.8" text-anchor="middle" data-label-for="4">workflows</text>
+<text class="dir-label" x="182.6" y="481.8" text-anchor="middle" data-label-for="6">ISSUE_TEMPLATE</text>
+<text class="dir-label" x="140.9" y="305.6" text-anchor="middle" data-label-for="9">assets</text>
+<text class="label" x="80.0" y="307.2" text-anchor="middle" data-label-for="10">structure.svg</text>
+<text class="label" x="203.3" y="278.3" text-anchor="middle" data-label-for="12">README.md</text>
+<text class="dir-label" x="272.0" y="170.6" text-anchor="middle" data-label-for="13">src</text>
+<text class="label" x="218.7" y="193.5" text-anchor="middle" data-label-for="14">scanner.rs</text>
+<text class="label" x="199.2" y="137.9" text-anchor="middle" data-label-for="15">layout.rs</text>
+<text class="label" x="252.4" y="108.8" text-anchor="middle" data-label-for="16">svg.rs</text>
+<text class="label" x="310.8" y="131.6" text-anchor="middle" data-label-for="17">interactive.rs</text>
+<text class="label" x="352.8" y="159.7" text-anchor="middle" data-label-for="18">main.rs</text>
+<text class="label" x="321.3" y="209.4" text-anchor="middle" data-label-for="19">graph.rs</text>
+
+    </g>
   </g>
-  <g class="nodes">
-    <circle class="node" cx="248.0" cy="287.7" r="8.0" fill="#4CAF50"/>
-    <circle class="node" cx="337.2" cy="309.7" r="15.7" fill="#BDBDBD"/>
-    <circle class="node" cx="279.5" cy="341.3" r="16.8" fill="#9E9E9E"/>
-    <circle class="node" cx="234.0" cy="408.1" r="8.0" fill="#4CAF50"/>
-    <circle class="node" cx="290.7" cy="458.8" r="8.0" fill="#4CAF50"/>
-    <circle class="node" cx="339.0" cy="494.5" r="16.1" fill="#9C27B0"/>
-    <circle class="node" cx="168.7" cy="458.8" r="8.0" fill="#4CAF50"/>
-    <circle class="node" cx="163.3" cy="520.0" r="10.7" fill="#9E9E9E"/>
-    <circle class="node" cx="105.3" cy="453.4" r="12.1" fill="#9E9E9E"/>
-    <circle class="node" cx="142.9" cy="268.5" r="8.0" fill="#4CAF50"/>
-    <circle class="node" cx="80.0" cy="255.1" r="23.0" fill="#BDBDBD"/>
-    <circle class="node" cx="196.0" cy="324.7" r="6.9" fill="#BDBDBD"/>
-    <circle class="node" cx="211.8" cy="239.2" r="21.2" fill="#9E9E9E"/>
-    <circle class="node" cx="290.7" cy="150.6" r="8.0" fill="#4CAF50"/>
-    <circle class="node" cx="225.8" cy="146.7" r="25.6" fill="#FF7043"/>
-    <circle class="node" cx="243.2" cy="85.0" r="27.9" fill="#FF7043"/>
-    <circle class="node" cx="309.5" cy="80.0" r="30.0" fill="#FF7043"/>
-    <circle class="node" cx="363.4" cy="118.4" r="22.3" fill="#FF7043"/>
-    <circle class="node" cx="351.8" cy="181.7" r="23.6" fill="#FF7043"/>
-    <circle class="node" cx="297.2" cy="255.4" r="9.2" fill="#9C27B0"/>
-  </g>
-  <g class="labels">
-    <text class="dir-label" x="248.0" y="307.7" text-anchor="middle">rv</text>
-    <text class="label" x="337.2" y="337.4" text-anchor="middle">LICENSE</text>
-    <text class="label" x="279.5" y="370.1" text-anchor="middle">CONTRIBUTING.md</text>
-    <text class="dir-label" x="234.0" y="428.1" text-anchor="middle">.github</text>
-    <text class="dir-label" x="290.7" y="478.8" text-anchor="middle">workflows</text>
-    <text class="label" x="339.0" y="522.6" text-anchor="middle">generate-viz.yml</text>
-    <text class="dir-label" x="168.7" y="478.8" text-anchor="middle">ISSUE_TEMPLATE</text>
-    <text class="dir-label" x="142.9" y="288.5" text-anchor="middle">assets</text>
-    <text class="label" x="80.0" y="290.1" text-anchor="middle">structure.svg</text>
-    <text class="label" x="211.8" y="272.4" text-anchor="middle">README.md</text>
-    <text class="dir-label" x="290.7" y="170.6" text-anchor="middle">src</text>
-    <text class="label" x="225.8" y="184.3" text-anchor="middle">scanner.rs</text>
-    <text class="label" x="243.2" y="124.9" text-anchor="middle">layout.rs</text>
-    <text class="label" x="309.5" y="122.0" text-anchor="middle">svg.rs</text>
-    <text class="label" x="363.4" y="152.7" text-anchor="middle">main.rs</text>
-    <text class="label" x="351.8" y="217.3" text-anchor="middle">graph.rs</text>
-  </g>
-  <g class="legend">
-    <rect x="695" y="15" width="90" height="172" fill="#1a1a2e" fill-opacity="0.8" rx="4"/>
-    <circle cx="705" cy="25" r="5" fill="#4CAF50"/>
-    <text x="718" y="29" class="label">Directory</text>
-    <circle cx="705" cy="43" r="5" fill="#FF7043"/>
-    <text x="718" y="47" class="label">Rust</text>
-    <circle cx="705" cy="61" r="5" fill="#FFEB3B"/>
-    <text x="718" y="65" class="label">JS</text>
-    <circle cx="705" cy="79" r="5" fill="#2196F3"/>
-    <text x="718" y="83" class="label">TS</text>
-    <circle cx="705" cy="97" r="5" fill="#3F51B5"/>
-    <text x="718" y="101" class="label">Python</text>
-    <circle cx="705" cy="115" r="5" fill="#00BCD4"/>
-    <text x="718" y="119" class="label">Go</text>
-    <circle cx="705" cy="133" r="5" fill="#9E9E9E"/>
-    <text x="718" y="137" class="label">Markdown</text>
-    <circle cx="705" cy="151" r="5" fill="#9C27B0"/>
-    <text x="718" y="155" class="label">Config</text>
-    <circle cx="705" cy="169" r="5" fill="#BDBDBD"/>
-    <text x="718" y="173" class="label">Other</text>
+  <g id="legend-group">
+<rect x="10" y="10" width="110" height="194" fill="#1a1a2e" fill-opacity="0.9" rx="6" stroke="#404060" stroke-width="1"/>
+<circle cx="24" cy="24" r="5" fill="#4CAF50"/>
+<text x="36" y="28" class="legend-text">Directory</text>
+<circle cx="24" cy="44" r="5" fill="#FF7043"/>
+<text x="36" y="48" class="legend-text">Rust</text>
+<circle cx="24" cy="64" r="5" fill="#FFEB3B"/>
+<text x="36" y="68" class="legend-text">JavaScript</text>
+<circle cx="24" cy="84" r="5" fill="#2196F3"/>
+<text x="36" y="88" class="legend-text">TypeScript</text>
+<circle cx="24" cy="104" r="5" fill="#3F51B5"/>
+<text x="36" y="108" class="legend-text">Python</text>
+<circle cx="24" cy="124" r="5" fill="#00BCD4"/>
+<text x="36" y="128" class="legend-text">Go</text>
+<circle cx="24" cy="144" r="5" fill="#9E9E9E"/>
+<text x="36" y="148" class="legend-text">Markdown</text>
+<circle cx="24" cy="164" r="5" fill="#9C27B0"/>
+<text x="36" y="168" class="legend-text">Config</text>
+<circle cx="24" cy="184" r="5" fill="#BDBDBD"/>
+<text x="36" y="188" class="legend-text">Other</text>
+
   </g>
 </svg>
+</div>
+
+<script>
+// === Data ===
+const NODES = [{"id":0,"label":"rv","fullPath":"/home/runner/work/rv/rv","isDir":true,"size":0,"fileType":"Directory","color":"#4CAF50","x":243.16,"y":293.19,"r":8.00},{"id":1,"label":"LICENSE","fullPath":"/home/runner/work/rv/rv/LICENSE","isDir":false,"size":1056,"fileType":"Other","color":"#BDBDBD","x":330.33,"y":308.77,"r":9.22},{"id":2,"label":"CONTRIBUTING.md","fullPath":"/home/runner/work/rv/rv/CONTRIBUTING.md","isDir":false,"size":1269,"fileType":"Markdown","color":"#9E9E9E","x":276.82,"y":341.62,"r":9.73},{"id":3,"label":".github","fullPath":"/home/runner/work/rv/rv/.github","isDir":true,"size":0,"fileType":"Directory","color":"#4CAF50","x":240.30,"y":408.67,"r":8.00},{"id":4,"label":"workflows","fullPath":"/home/runner/work/rv/rv/.github/workflows","isDir":true,"size":0,"fileType":"Directory","color":"#4CAF50","x":298.43,"y":451.76,"r":8.00},{"id":5,"label":"generate-viz.yml","fullPath":"/home/runner/work/rv/rv/.github/workflows/generate-viz.yml","isDir":false,"size":1130,"fileType":"Config","color":"#9C27B0","x":347.36,"y":481.11,"r":9.40},{"id":6,"label":"ISSUE_TEMPLATE","fullPath":"/home/runner/work/rv/rv/.github/ISSUE_TEMPLATE","isDir":true,"size":0,"fileType":"Directory","color":"#4CAF50","x":182.59,"y":461.80,"r":8.00},{"id":7,"label":"feature_request.md","fullPath":"/home/runner/work/rv/rv/.github/ISSUE_TEMPLATE/feature_request.md","isDir":false,"size":344,"fileType":"Markdown","color":"#9E9E9E","x":182.58,"y":520.00,"r":6.98},{"id":8,"label":"bug_report.md","fullPath":"/home/runner/work/rv/rv/.github/ISSUE_TEMPLATE/bug_report.md","isDir":false,"size":500,"fileType":"Markdown","color":"#9E9E9E","x":122.20,"y":461.91,"r":7.60},{"id":9,"label":"assets","fullPath":"/home/runner/work/rv/rv/assets","isDir":true,"size":0,"fileType":"Directory","color":"#4CAF50","x":140.91,"y":285.63,"r":8.00},{"id":10,"label":"structure.svg","fullPath":"/home/runner/work/rv/rv/assets/structure.svg","isDir":false,"size":5700,"fileType":"Other","color":"#BDBDBD","x":80.00,"y":279.05,"r":16.14},{"id":11,"label":".gitignore","fullPath":"/home/runner/work/rv/rv/.gitignore","isDir":false,"size":74,"fileType":"Other","color":"#BDBDBD","x":197.35,"y":333.25,"r":5.38},{"id":12,"label":"README.md","fullPath":"/home/runner/work/rv/rv/README.md","isDir":false,"size":3674,"fileType":"Markdown","color":"#9E9E9E","x":203.26,"y":252.59,"r":13.75},{"id":13,"label":"src","fullPath":"/home/runner/work/rv/rv/src","isDir":true,"size":0,"fileType":"Directory","color":"#4CAF50","x":272.05,"y":150.55,"r":8.00},{"id":14,"label":"scanner.rs","fullPath":"/home/runner/work/rv/rv/src/scanner.rs","isDir":false,"size":3595,"fileType":"Rust","color":"#FF7043","x":218.65,"y":167.86,"r":13.64},{"id":15,"label":"layout.rs","fullPath":"/home/runner/work/rv/rv/src/layout.rs","isDir":false,"size":4391,"fileType":"Rust","color":"#FF7043","x":199.17,"y":111.21,"r":14.65},{"id":16,"label":"svg.rs","fullPath":"/home/runner/work/rv/rv/src/svg.rs","isDir":false,"size":6298,"fileType":"Rust","color":"#FF7043","x":252.41,"y":80.00,"r":16.76},{"id":17,"label":"interactive.rs","fullPath":"/home/runner/work/rv/rv/src/interactive.rs","isDir":false,"size":26150,"fileType":"Rust","color":"#FF7043","x":310.85,"y":89.60,"r":30.00},{"id":18,"label":"main.rs","fullPath":"/home/runner/work/rv/rv/src/main.rs","isDir":false,"size":3236,"fileType":"Rust","color":"#FF7043","x":352.84,"y":134.56,"r":13.15},{"id":19,"label":"graph.rs","fullPath":"/home/runner/work/rv/rv/src/graph.rs","isDir":false,"size":3035,"fileType":"Rust","color":"#FF7043","x":321.28,"y":184.57,"r":12.86},{"id":20,"label":"Cargo.toml","fullPath":"/home/runner/work/rv/rv/Cargo.toml","isDir":false,"size":204,"fileType":"Config","color":"#9C27B0","x":288.78,"y":261.13,"r":6.30}];
+const EDGES = [{"from":0,"to":1},{"from":0,"to":2},{"from":0,"to":3},{"from":3,"to":4},{"from":4,"to":5},{"from":3,"to":6},{"from":6,"to":7},{"from":6,"to":8},{"from":0,"to":9},{"from":9,"to":10},{"from":0,"to":11},{"from":0,"to":12},{"from":0,"to":13},{"from":13,"to":14},{"from":13,"to":15},{"from":13,"to":16},{"from":13,"to":17},{"from":13,"to":18},{"from":13,"to":19},{"from":0,"to":20}];
+const CHILDREN_MAP = {"6":[7,8],"0":[1,2,3,9,11,12,13,20],"4":[5],"3":[4,6],"9":[10],"13":[14,15,16,17,18,19]};
+
+// === State ===
+let scale = 1;
+let panX = 0, panY = 0;
+let isPanning = false;
+let panStartX = 0, panStartY = 0;
+let panStartPanX = 0, panStartPanY = 0;
+let isDraggingNode = false;
+let dragNodeId = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+let hoveredNodeId = null;
+let collapsedDirs = new Set();
+let hiddenNodes = new Set();
+let searchMatches = new Set();
+
+const svg = document.getElementById('graph-svg');
+const panZoomGroup = document.getElementById('pan-zoom-group');
+const edgesGroup = document.getElementById('edges-group');
+const nodesGroup = document.getElementById('nodes-group');
+const labelsGroup = document.getElementById('labels-group');
+const tooltip = document.getElementById('tooltip');
+const searchInput = document.getElementById('search-input');
+const searchCount = document.getElementById('search-count');
+
+const nodeEls = nodesGroup.querySelectorAll('.node');
+const edgeEls = edgesGroup.querySelectorAll('.edge');
+const labelEls = labelsGroup.querySelectorAll('text');
+
+// Index elements by data-id
+const nodeElById = {};
+nodeEls.forEach(el => { nodeElById[el.getAttribute('data-id')] = el; });
+const labelElById = {};
+labelEls.forEach(el => { labelElById[el.getAttribute('data-label-for')] = el; });
+
+// Build edge index: nodeId -> [edge indices]
+const edgesByNode = {};
+edgeEls.forEach((el, idx) => {
+  const from = el.getAttribute('data-from');
+  const to = el.getAttribute('data-to');
+  if (!edgesByNode[from]) edgesByNode[from] = [];
+  if (!edgesByNode[to]) edgesByNode[to] = [];
+  edgesByNode[from].push(idx);
+  edgesByNode[to].push(idx);
+});
+
+// Build neighbor index
+const neighborsByNode = {};
+EDGES.forEach(e => {
+  if (!neighborsByNode[e.from]) neighborsByNode[e.from] = [];
+  if (!neighborsByNode[e.to]) neighborsByNode[e.to] = [];
+  neighborsByNode[e.from].push(e.to);
+  neighborsByNode[e.to].push(e.from);
+});
+
+// === Transform ===
+function applyTransform() {
+  panZoomGroup.setAttribute('transform', `translate(${panX},${panY}) scale(${scale})`);
+}
+
+// === Zoom ===
+svg.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = svg.getBoundingClientRect();
+  const svgW = parseFloat(svg.getAttribute('viewBox').split(' ')[2]);
+  const svgH = parseFloat(svg.getAttribute('viewBox').split(' ')[3]);
+  // Mouse position in SVG coordinate space
+  const mx = (e.clientX - rect.left) / rect.width * svgW;
+  const my = (e.clientY - rect.top) / rect.height * svgH;
+
+  const oldScale = scale;
+  const zoomFactor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+  scale = Math.min(Math.max(scale * zoomFactor, 0.1), 30);
+
+  // Adjust pan so zoom is centered on mouse
+  panX = mx - (mx - panX) * (scale / oldScale);
+  panY = my - (my - panY) * (scale / oldScale);
+
+  applyTransform();
+}, { passive: false });
+
+// === Pan ===
+svg.addEventListener('mousedown', (e) => {
+  // Check if we hit a node
+  const target = e.target;
+  if (target.classList.contains('node')) {
+    const nodeId = parseInt(target.getAttribute('data-id'));
+    const nodeData = NODES[nodeId];
+
+    // If it's a directory and not shift-held, toggle collapse
+    if (nodeData && nodeData.isDir && !e.shiftKey) {
+      toggleCollapse(nodeId);
+      return;
+    }
+
+    // Start dragging
+    isDraggingNode = true;
+    dragNodeId = nodeId;
+    const rect = svg.getBoundingClientRect();
+    const svgW = parseFloat(svg.getAttribute('viewBox').split(' ')[2]);
+    const svgH = parseFloat(svg.getAttribute('viewBox').split(' ')[3]);
+    const mx = (e.clientX - rect.left) / rect.width * svgW;
+    const my = (e.clientY - rect.top) / rect.height * svgH;
+    const worldX = (mx - panX) / scale;
+    const worldY = (my - panY) / scale;
+    dragOffsetX = worldX - nodeData.x;
+    dragOffsetY = worldY - nodeData.y;
+    e.preventDefault();
+    return;
+  }
+
+  isPanning = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  panStartPanX = panX;
+  panStartPanY = panY;
+  svg.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (isPanning) {
+    const rect = svg.getBoundingClientRect();
+    const svgW = parseFloat(svg.getAttribute('viewBox').split(' ')[2]);
+    const svgH = parseFloat(svg.getAttribute('viewBox').split(' ')[3]);
+    const dx = (e.clientX - panStartX) / rect.width * svgW;
+    const dy = (e.clientY - panStartY) / rect.height * svgH;
+    panX = panStartPanX + dx;
+    panY = panStartPanY + dy;
+    applyTransform();
+    return;
+  }
+  if (isDraggingNode && dragNodeId !== null) {
+    const rect = svg.getBoundingClientRect();
+    const svgW = parseFloat(svg.getAttribute('viewBox').split(' ')[2]);
+    const svgH = parseFloat(svg.getAttribute('viewBox').split(' ')[3]);
+    const mx = (e.clientX - rect.left) / rect.width * svgW;
+    const my = (e.clientY - rect.top) / rect.height * svgH;
+    const worldX = (mx - panX) / scale;
+    const worldY = (my - panY) / scale;
+    const newX = worldX - dragOffsetX;
+    const newY = worldY - dragOffsetY;
+
+    // Update data
+    NODES[dragNodeId].x = newX;
+    NODES[dragNodeId].y = newY;
+
+    // Update node circle
+    const el = nodeElById[dragNodeId];
+    if (el) {
+      el.setAttribute('cx', newX.toFixed(1));
+      el.setAttribute('cy', newY.toFixed(1));
+    }
+
+    // Update label
+    const lbl = labelElById[dragNodeId];
+    if (lbl) {
+      lbl.setAttribute('x', newX.toFixed(1));
+      lbl.setAttribute('y', (newY + NODES[dragNodeId].r + 12).toFixed(1));
+    }
+
+    // Update connected edges
+    (edgesByNode[dragNodeId] || []).forEach(idx => {
+      const edgeEl = edgeEls[idx];
+      const fromId = edgeEl.getAttribute('data-from');
+      const toId = edgeEl.getAttribute('data-to');
+      const fromNode = NODES[fromId];
+      const toNode = NODES[toId];
+      edgeEl.setAttribute('x1', fromNode.x.toFixed(1));
+      edgeEl.setAttribute('y1', fromNode.y.toFixed(1));
+      edgeEl.setAttribute('x2', toNode.x.toFixed(1));
+      edgeEl.setAttribute('y2', toNode.y.toFixed(1));
+    });
+
+    e.preventDefault();
+    return;
+  }
+
+  // Hover detection
+  handleHover(e);
+});
+
+window.addEventListener('mouseup', () => {
+  isPanning = false;
+  isDraggingNode = false;
+  dragNodeId = null;
+  svg.style.cursor = '';
+});
+
+// === Hover / Tooltip ===
+function handleHover(e) {
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  if (target && target.classList.contains('node')) {
+    const nodeId = parseInt(target.getAttribute('data-id'));
+    if (nodeId !== hoveredNodeId) {
+      hoveredNodeId = nodeId;
+      highlightNode(nodeId);
+      showTooltip(e, nodeId);
+    } else {
+      moveTooltip(e);
+    }
+  } else {
+    if (hoveredNodeId !== null) {
+      hoveredNodeId = null;
+      clearHighlight();
+      hideTooltip();
+    }
+  }
+}
+
+function highlightNode(nodeId) {
+  const connectedNodes = new Set([nodeId]);
+  const connectedEdges = new Set();
+
+  (edgesByNode[nodeId] || []).forEach(idx => {
+    connectedEdges.add(idx);
+    const el = edgeEls[idx];
+    connectedNodes.add(parseInt(el.getAttribute('data-from')));
+    connectedNodes.add(parseInt(el.getAttribute('data-to')));
+  });
+
+  // Dim everything, then highlight connected
+  nodeEls.forEach(el => {
+    const id = parseInt(el.getAttribute('data-id'));
+    if (connectedNodes.has(id)) {
+      el.classList.add('highlighted');
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.add('dimmed');
+      el.classList.remove('highlighted');
+    }
+  });
+
+  edgeEls.forEach((el, idx) => {
+    if (connectedEdges.has(idx)) {
+      el.classList.add('highlighted');
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.add('dimmed');
+      el.classList.remove('highlighted');
+    }
+  });
+
+  labelEls.forEach(el => {
+    const forId = parseInt(el.getAttribute('data-label-for'));
+    if (connectedNodes.has(forId)) {
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.add('dimmed');
+    }
+  });
+}
+
+function clearHighlight() {
+  nodeEls.forEach(el => {
+    el.classList.remove('highlighted', 'dimmed');
+    // Restore search match state
+    const id = parseInt(el.getAttribute('data-id'));
+    if (searchMatches.size > 0 && searchMatches.has(id)) {
+      el.classList.add('search-match');
+    }
+  });
+  edgeEls.forEach(el => el.classList.remove('highlighted', 'dimmed'));
+  labelEls.forEach(el => el.classList.remove('dimmed'));
+  // Reapply collapse hiding
+  applyVisibility();
+}
+
+function formatSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let s = bytes;
+  let i = 0;
+  while (s >= 1024 && i < units.length - 1) { s /= 1024; i++; }
+  return i === 0 ? `${bytes} B` : `${s.toFixed(1)} ${units[i]}`;
+}
+
+function showTooltip(e, nodeId) {
+  const node = NODES[nodeId];
+  if (!node) return;
+  let html = `<div class="tt-name">${node.label}</div>`;
+  html += `<div class="tt-path">${node.fullPath}</div>`;
+  html += `<div class="tt-detail">Type: <span>${node.fileType}</span></div>`;
+  if (!node.isDir) {
+    html += `<div class="tt-detail">Size: <span>${formatSize(node.size)}</span></div>`;
+  }
+  if (node.isDir) {
+    const childCount = (CHILDREN_MAP[nodeId] || []).length;
+    const isCollapsed = collapsedDirs.has(nodeId);
+    html += `<div class="tt-detail">Children: <span>${childCount}</span></div>`;
+    html += `<div class="tt-hint">Click to ${isCollapsed ? 'expand' : 'collapse'}</div>`;
+  } else {
+    html += `<div class="tt-hint">Shift+drag to move</div>`;
+  }
+  tooltip.innerHTML = html;
+  tooltip.style.display = 'block';
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const pad = 16;
+  let x = e.clientX + pad;
+  let y = e.clientY + pad;
+  // Keep tooltip in viewport
+  const rect = tooltip.getBoundingClientRect();
+  if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - pad;
+  if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - pad;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  tooltip.style.display = 'none';
+}
+
+// === Collapse / Expand Directories ===
+function getAllDescendants(nodeId) {
+  const descendants = new Set();
+  const queue = [...(CHILDREN_MAP[nodeId] || [])];
+  while (queue.length > 0) {
+    const id = queue.pop();
+    if (descendants.has(id)) continue;
+    descendants.add(id);
+    (CHILDREN_MAP[id] || []).forEach(child => queue.push(child));
+  }
+  return descendants;
+}
+
+function toggleCollapse(nodeId) {
+  if (collapsedDirs.has(nodeId)) {
+    collapsedDirs.delete(nodeId);
+  } else {
+    collapsedDirs.add(nodeId);
+  }
+  recomputeHidden();
+  applyVisibility();
+
+  // Update directory visual indicator
+  const el = nodeElById[nodeId];
+  if (el) {
+    if (collapsedDirs.has(nodeId)) {
+      el.classList.add('collapsed-dir');
+    } else {
+      el.classList.remove('collapsed-dir');
+    }
+  }
+}
+
+function recomputeHidden() {
+  hiddenNodes.clear();
+  collapsedDirs.forEach(dirId => {
+    getAllDescendants(dirId).forEach(id => hiddenNodes.add(id));
+  });
+}
+
+function applyVisibility() {
+  nodeEls.forEach(el => {
+    const id = parseInt(el.getAttribute('data-id'));
+    el.style.display = hiddenNodes.has(id) ? 'none' : '';
+  });
+  edgeEls.forEach(el => {
+    const from = parseInt(el.getAttribute('data-from'));
+    const to = parseInt(el.getAttribute('data-to'));
+    el.style.display = (hiddenNodes.has(from) || hiddenNodes.has(to)) ? 'none' : '';
+  });
+  labelEls.forEach(el => {
+    const forId = parseInt(el.getAttribute('data-label-for'));
+    el.style.display = hiddenNodes.has(forId) ? 'none' : '';
+  });
+}
+
+// === Search ===
+function handleSearch() {
+  const query = searchInput.value.trim().toLowerCase();
+  searchMatches.clear();
+
+  if (query === '') {
+    searchCount.textContent = '';
+    nodeEls.forEach(el => {
+      el.classList.remove('search-match', 'dimmed');
+    });
+    edgeEls.forEach(el => el.classList.remove('dimmed'));
+    labelEls.forEach(el => el.classList.remove('dimmed'));
+    return;
+  }
+
+  NODES.forEach(node => {
+    if (node.label.toLowerCase().includes(query) || node.fullPath.toLowerCase().includes(query)) {
+      searchMatches.add(node.id);
+    }
+  });
+
+  searchCount.textContent = `${searchMatches.size} match${searchMatches.size !== 1 ? 'es' : ''}`;
+
+  // Highlight matches, dim others
+  nodeEls.forEach(el => {
+    const id = parseInt(el.getAttribute('data-id'));
+    if (searchMatches.has(id)) {
+      el.classList.add('search-match');
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.add('dimmed');
+      el.classList.remove('search-match');
+    }
+  });
+
+  edgeEls.forEach(el => {
+    const from = parseInt(el.getAttribute('data-from'));
+    const to = parseInt(el.getAttribute('data-to'));
+    if (searchMatches.has(from) && searchMatches.has(to)) {
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.add('dimmed');
+    }
+  });
+
+  labelEls.forEach(el => {
+    const forId = parseInt(el.getAttribute('data-label-for'));
+    if (searchMatches.has(forId)) {
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.add('dimmed');
+    }
+  });
+
+  // Auto-pan to first match
+  if (searchMatches.size > 0) {
+    const firstId = searchMatches.values().next().value;
+    panToNode(firstId);
+  }
+}
+
+function panToNode(nodeId) {
+  const node = NODES[nodeId];
+  if (!node) return;
+  const svgW = parseFloat(svg.getAttribute('viewBox').split(' ')[2]);
+  const svgH = parseFloat(svg.getAttribute('viewBox').split(' ')[3]);
+  // Center the node in the viewport
+  const targetScale = Math.max(scale, 1.5);
+  panX = svgW / 2 - node.x * targetScale;
+  panY = svgH / 2 - node.y * targetScale;
+  scale = targetScale;
+  applyTransform();
+}
+
+searchInput.addEventListener('input', handleSearch);
+
+// === Keyboard shortcuts ===
+document.addEventListener('keydown', (e) => {
+  // Ctrl+F or Cmd+F => focus search
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+  }
+  // Escape => clear search, reset view
+  if (e.key === 'Escape') {
+    searchInput.value = '';
+    searchInput.blur();
+    handleSearch();
+    // Reset pan/zoom
+    scale = 1;
+    panX = 0;
+    panY = 0;
+    applyTransform();
+    // Clear collapsed
+    collapsedDirs.clear();
+    recomputeHidden();
+    applyVisibility();
+    nodeEls.forEach(el => el.classList.remove('collapsed-dir'));
+  }
+});
+
+// === Fit to view on load ===
+(function() {
+  if (NODES.length === 0) return;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  NODES.forEach(n => {
+    if (n.x - n.r < minX) minX = n.x - n.r;
+    if (n.x + n.r > maxX) maxX = n.x + n.r;
+    if (n.y - n.r < minY) minY = n.y - n.r;
+    if (n.y + n.r > maxY) maxY = n.y + n.r;
+  });
+  const svgW = parseFloat(svg.getAttribute('viewBox').split(' ')[2]);
+  const svgH = parseFloat(svg.getAttribute('viewBox').split(' ')[3]);
+  const graphW = maxX - minX || 1;
+  const graphH = maxY - minY || 1;
+  const padding = 60;
+  const sx = (svgW - padding * 2) / graphW;
+  const sy = (svgH - padding * 2) / graphH;
+  scale = Math.min(sx, sy, 3);
+  panX = (svgW - graphW * scale) / 2 - minX * scale;
+  panY = (svgH - graphH * scale) / 2 - minY * scale;
+  applyTransform();
+})();
+</script>
+</body>
+</html>
