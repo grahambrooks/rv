@@ -4,7 +4,7 @@ A Rust CLI tool that generates interactive, force-directed graph visualizations 
 
 ## Project Structure
 
-![Project Structure](assets/structure.svg)
+![Project Structure](assets/structure.png)
 
 ## Features
 
