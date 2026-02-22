@@ -1,4 +1,5 @@
 mod graph;
+mod interactive;
 mod layout;
 mod scanner;
 mod svg;
@@ -15,9 +16,9 @@ struct Args {
     #[arg(default_value = ".")]
     path: PathBuf,
 
-    /// Output SVG file
-    #[arg(short, long, default_value = "output.svg")]
-    output: PathBuf,
+    /// Output file (defaults to output.html when interactive, output.svg otherwise)
+    #[arg(short, long)]
+    output: Option<PathBuf>,
 
     /// SVG width in pixels
     #[arg(short = 'W', long, default_value = "1200")]
@@ -34,10 +35,23 @@ struct Args {
     /// Include all directories (don't filter build/output dirs like node_modules, target, etc.)
     #[arg(short = 'a', long)]
     all: bool,
+
+    /// Disable interactive mode and output a static SVG instead
+    #[arg(long = "no-interactive")]
+    no_interactive: bool,
 }
 
 fn main() {
     let args = Args::parse();
+
+    let interactive = !args.no_interactive;
+
+    let default_output = if interactive {
+        PathBuf::from("output.html")
+    } else {
+        PathBuf::from("output.svg")
+    };
+    let output_path = args.output.unwrap_or(default_output);
 
     let path = args.path.canonicalize().unwrap_or_else(|e| {
         eprintln!("Error: Cannot access path '{}': {}", args.path.display(), e);
@@ -79,13 +93,22 @@ fn main() {
         80.0,
     );
 
-    eprintln!("Rendering SVG...");
-    let svg_content = svg::render_svg(&graph, &layout_result, args.width, args.height);
+    let output_content = if interactive {
+        eprintln!("Rendering interactive HTML...");
+        interactive::render_interactive_html(&graph, &layout_result, args.width, args.height)
+    } else {
+        eprintln!("Rendering SVG...");
+        svg::render_svg(&graph, &layout_result, args.width, args.height)
+    };
 
-    fs::write(&args.output, &svg_content).unwrap_or_else(|e| {
-        eprintln!("Error: Cannot write to '{}': {}", args.output.display(), e);
+    fs::write(&output_path, &output_content).unwrap_or_else(|e| {
+        eprintln!(
+            "Error: Cannot write to '{}': {}",
+            output_path.display(),
+            e
+        );
         std::process::exit(1);
     });
 
-    eprintln!("Output written to: {}", args.output.display());
+    eprintln!("Output written to: {}", output_path.display());
 }

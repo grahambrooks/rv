@@ -2,10 +2,10 @@ use crate::graph::{Graph, Node};
 use crate::layout::LayoutResult;
 use std::fmt::Write;
 
-const MIN_RADIUS: f64 = 4.0;
-const MAX_RADIUS: f64 = 30.0;
-const DIR_RADIUS: f64 = 8.0;
-const BG_COLOR: &str = "#1a1a2e";
+pub const MIN_RADIUS: f64 = 4.0;
+pub const MAX_RADIUS: f64 = 30.0;
+pub const DIR_RADIUS: f64 = 8.0;
+pub const BG_COLOR: &str = "#1a1a2e";
 
 pub fn render_svg(graph: &Graph, layout: &LayoutResult, width: u32, height: u32) -> String {
     let mut svg = String::new();
@@ -28,10 +28,10 @@ pub fn render_svg(graph: &Graph, layout: &LayoutResult, width: u32, height: u32)
 
     // Styles
     svg.push_str("  <style>\n");
-    svg.push_str("    .edge { stroke: #404060; stroke-width: 1; stroke-opacity: 0.6; }\n");
-    svg.push_str("    .node { stroke: #fff; stroke-width: 1; stroke-opacity: 0.3; }\n");
-    svg.push_str("    .label { font-family: monospace; font-size: 10px; fill: #e0e0e0; }\n");
-    svg.push_str("    .dir-label { font-family: monospace; font-size: 11px; fill: #fff; font-weight: bold; }\n");
+    svg.push_str("    .edge { stroke: #7878a0; stroke-width: 1.5; stroke-opacity: 0.8; }\n");
+    svg.push_str("    .node { stroke: #fff; stroke-width: 1; stroke-opacity: 0.3; cursor: pointer; }\n");
+    svg.push_str("    .label { font-family: monospace; font-size: 10px; fill: #e0e0e0; pointer-events: none; }\n");
+    svg.push_str("    .dir-label { font-family: monospace; font-size: 11px; fill: #fff; font-weight: bold; pointer-events: none; }\n");
     svg.push_str("  </style>\n");
 
     // Render edges first (below nodes)
@@ -41,22 +41,15 @@ pub fn render_svg(graph: &Graph, layout: &LayoutResult, width: u32, height: u32)
         let to_pos = &layout.positions[edge.to];
         writeln!(
             svg,
-            r#"    <line class="edge" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}"/>"#,
-            from_pos.x, from_pos.y, to_pos.x, to_pos.y
+            r#"    <line class="edge" x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" data-from="{}" data-to="{}"/>"#,
+            from_pos.x, from_pos.y, to_pos.x, to_pos.y, edge.from, edge.to
         )
         .unwrap();
     }
     svg.push_str("  </g>\n");
 
     // Calculate max size for scaling
-    let max_size = graph
-        .nodes
-        .iter()
-        .filter(|n| !n.is_dir)
-        .map(|n| n.size)
-        .max()
-        .unwrap_or(1)
-        .max(1) as f64;
+    let max_size = compute_max_size(graph);
 
     // Render nodes
     svg.push_str("  <g class=\"nodes\">\n");
@@ -67,8 +60,17 @@ pub fn render_svg(graph: &Graph, layout: &LayoutResult, width: u32, height: u32)
 
         writeln!(
             svg,
-            r#"    <circle class="node" cx="{:.1}" cy="{:.1}" r="{:.1}" fill="{}"/>"#,
-            pos.x, pos.y, radius, color
+            r#"    <circle class="node" cx="{:.1}" cy="{:.1}" r="{:.1}" fill="{}" data-id="{}" data-label="{}" data-path="{}" data-type="{:?}" data-size="{}" data-is-dir="{}"/>"#,
+            pos.x,
+            pos.y,
+            radius,
+            color,
+            node.id,
+            escape_xml(&node.label),
+            escape_xml(&node.full_path),
+            node.file_type,
+            node.size,
+            node.is_dir
         )
         .unwrap();
     }
@@ -87,10 +89,11 @@ pub fn render_svg(graph: &Graph, layout: &LayoutResult, width: u32, height: u32)
 
             writeln!(
                 svg,
-                r#"    <text class="{}" x="{:.1}" y="{:.1}" text-anchor="middle">{}</text>"#,
+                r#"    <text class="{}" x="{:.1}" y="{:.1}" text-anchor="middle" data-label-for="{}">{}</text>"#,
                 label_class,
                 pos.x,
                 pos.y + radius + 12.0,
+                node.id,
                 escape_xml(&truncated_label)
             )
             .unwrap();
@@ -105,7 +108,18 @@ pub fn render_svg(graph: &Graph, layout: &LayoutResult, width: u32, height: u32)
     svg
 }
 
-fn calculate_radius(node: &Node, max_size: f64) -> f64 {
+pub fn compute_max_size(graph: &Graph) -> f64 {
+    graph
+        .nodes
+        .iter()
+        .filter(|n| !n.is_dir)
+        .map(|n| n.size)
+        .max()
+        .unwrap_or(1)
+        .max(1) as f64
+}
+
+pub fn calculate_radius(node: &Node, max_size: f64) -> f64 {
     if node.is_dir {
         DIR_RADIUS
     } else if node.size == 0 {
@@ -116,20 +130,40 @@ fn calculate_radius(node: &Node, max_size: f64) -> f64 {
     }
 }
 
-fn truncate_label(label: &str, max_len: usize) -> String {
-    if label.len() <= max_len {
+pub fn truncate_label(label: &str, max_len: usize) -> String {
+    if label.chars().count() <= max_len {
         label.to_string()
     } else {
-        format!("{}...", &label[..max_len - 3])
+        let truncated: String = label.chars().take(max_len - 3).collect();
+        format!("{}...", truncated)
     }
 }
 
-fn escape_xml(s: &str) -> String {
+pub fn escape_xml(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
+}
+
+#[allow(dead_code)]
+pub fn format_size(size: u64) -> String {
+    if size == 0 {
+        return "0 B".to_string();
+    }
+    let units = ["B", "KB", "MB", "GB"];
+    let mut s = size as f64;
+    let mut unit_idx = 0;
+    while s >= 1024.0 && unit_idx < units.len() - 1 {
+        s /= 1024.0;
+        unit_idx += 1;
+    }
+    if unit_idx == 0 {
+        format!("{} {}", size, units[unit_idx])
+    } else {
+        format!("{:.1} {}", s, units[unit_idx])
+    }
 }
 
 fn render_legend(svg: &mut String, width: u32) {

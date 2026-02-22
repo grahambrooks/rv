@@ -5,3 +5,4 @@
 Cargo.lock
 *.svg
 !assets/*.svg
+.DS_Store

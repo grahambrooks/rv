@@ -6,6 +6,7 @@ use std::path::PathBuf;
 pub struct Node {
     pub id: usize,
     pub label: String,
+    pub full_path: String,
     pub is_dir: bool,
     pub size: u64,
     pub file_type: FileType,
@@ -83,6 +84,7 @@ pub fn build_graph(scan_result: ScanResult) -> Graph {
         nodes.push(Node {
             id,
             label: entry.name.clone(),
+            full_path: entry.path.to_string_lossy().to_string(),
             is_dir: entry.is_dir,
             size: entry.size,
             file_type,
