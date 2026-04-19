@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: rv
+  title: rv
+  description: Rust CLI tool for interactive graph visualizations of directory structures
+  tags:
+    - rust
+    - cli
+    - visualization
+    - graph
+spec:
+  type: tool
+  lifecycle: experimental
+  owner: grahambrooks
+
