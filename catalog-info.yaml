@@ -11,6 +11,6 @@ metadata:
     - graph
 spec:
   type: tool
+  system: development-tools
   lifecycle: experimental
-  owner: grahambrooks
-
+  owner: user:grahambrooks
