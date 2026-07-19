@@ -138,10 +138,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet "Formula/${FORMULA_NAME}.rb"; then
+          git add "Formula/${FORMULA_NAME}.rb"
+          # stage-then-diff so a brand-new (untracked) formula is also detected
+          if git diff --cached --quiet; then
             echo "Formula unchanged"
             exit 0
           fi
-          git add "Formula/${FORMULA_NAME}.rb"
           git commit -m "Update Homebrew formula for ${GITHUB_REF_NAME}"
           git push origin main
