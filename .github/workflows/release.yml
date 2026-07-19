@@ -110,6 +110,7 @@ jobs:
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
           version="${tag#v}"
+          mkdir -p Formula   # dir may be absent (git doesn't track empty dirs)
           sleep 10   # let release assets settle
 
           empty_sha=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
