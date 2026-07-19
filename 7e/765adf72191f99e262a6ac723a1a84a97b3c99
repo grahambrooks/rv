@@ -1,0 +1,21 @@
+.github/workflows/release.yml
+  s_524af62fcb4284::t_28bea2b85bc046 141-143
+Cargo.toml
+  s_524af62fcb4284::t_7a2207afdf1b5a 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "7e765adf72191f99e262a6ac723a1a84a97b3c99",
+  "prompts": {},
+  "sessions": {
+    "s_524af62fcb4284": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d34aaefe-f594-4e94-b5db-35e086bd65df",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
