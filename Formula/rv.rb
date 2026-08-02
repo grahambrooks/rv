@@ -6,8 +6,8 @@ class Rv < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/grahambrooks/rv/releases/download/v2026.7.3/rv-v2026.7.3-aarch64-apple-darwin.tar.gz"
-      sha256 "00b899919e963461833f5a5771da6c0acfe561b072410bbf674aafd487f6e4e2"
+      url "https://github.com/grahambrooks/rv/archive/refs/tags/v2026.8.1.tar.gz"
+      sha256 "f417c55b7a67d27a2bdf50f557cf2b69e7d2f69cc9d0fdb767e97f0a50403d4a"
     end
     on_intel do
       odie "Intel Mac binaries are not provided. Run `cargo install --git https://github.com/grahambrooks/rv --locked` to build from source."
