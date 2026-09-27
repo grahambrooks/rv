@@ -20,5 +20,10 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --locked --all-targets
-      - run: cargo test --locked
+      # --locked only when a lockfile is committed: with none, --locked refuses
+      # to create one and every PR fails before compiling (mcp-dep, rv).
+      - name: Build + test
+        run: |
+          locked=""; [ -f Cargo.lock ] && locked="--locked"
+          cargo build $locked --all-targets
+          cargo test $locked
