@@ -8,8 +8,9 @@ Thanks for your interest in contributing!
 2. Clone your fork: `git clone https://github.com/yourusername/rv.git`
 3. Create a branch: `git checkout -b feature/your-feature`
 4. Make your changes
-5. Run tests: `cargo test`
-6. Run clippy: `cargo clippy`
+5. Run the CI checks (rustfmt, clippy, tests): `make check`
+   (`make hooks` installs git hooks that run it before every push)
+6. Format with `make fmt` if the format check fails
 7. Commit your changes
 8. Push and open a Pull Request
 
