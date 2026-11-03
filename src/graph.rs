@@ -93,15 +93,14 @@ pub fn build_graph(scan_result: ScanResult) -> Graph {
 
     // Create edges
     for entry in &scan_result.entries {
-        if let Some(parent_path) = scan_result.parent_map.get(&entry.path) {
-            if let (Some(&from_id), Some(&to_id)) =
+        if let Some(parent_path) = scan_result.parent_map.get(&entry.path)
+            && let (Some(&from_id), Some(&to_id)) =
                 (path_to_id.get(parent_path), path_to_id.get(&entry.path))
-            {
-                edges.push(Edge {
-                    from: from_id,
-                    to: to_id,
-                });
-            }
+        {
+            edges.push(Edge {
+                from: from_id,
+                to: to_id,
+            });
         }
     }
 

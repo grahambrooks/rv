@@ -102,11 +102,7 @@ fn main() {
     };
 
     fs::write(&output_path, &output_content).unwrap_or_else(|e| {
-        eprintln!(
-            "Error: Cannot write to '{}': {}",
-            output_path.display(),
-            e
-        );
+        eprintln!("Error: Cannot write to '{}': {}", output_path.display(), e);
         std::process::exit(1);
     });
 

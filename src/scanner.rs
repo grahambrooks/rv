@@ -136,10 +136,10 @@ pub fn scan_directory(
             path.extension().map(|e| e.to_string_lossy().to_lowercase())
         };
 
-        if let Some(parent) = path.parent() {
-            if parent != path {
-                parent_map.insert(path.clone(), parent.to_path_buf());
-            }
+        if let Some(parent) = path.parent()
+            && parent != path
+        {
+            parent_map.insert(path.clone(), parent.to_path_buf());
         }
 
         entries.push(FileEntry {

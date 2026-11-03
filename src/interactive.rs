@@ -1,8 +1,6 @@
 use crate::graph::Graph;
 use crate::layout::LayoutResult;
-use crate::svg::{
-    calculate_radius, compute_max_size, escape_xml, truncate_label, BG_COLOR,
-};
+use crate::svg::{BG_COLOR, calculate_radius, compute_max_size, escape_xml, truncate_label};
 use std::fmt::Write;
 
 /// Render an interactive HTML file with embedded SVG and JavaScript.
@@ -27,13 +25,13 @@ pub fn render_interactive_html(
         let color = node.file_type.color();
         write!(
             nodes_json,
-            r#"{{"id":{},"label":"{}","fullPath":"{}","isDir":{},"size":{},"fileType":"{}","color":"{}","x":{:.2},"y":{:.2},"r":{:.2}}}"#,
+            r#"{{"id":{},"label":"{}","fullPath":"{}","isDir":{},"size":{},"fileType":"{:?}","color":"{}","x":{:.2},"y":{:.2},"r":{:.2}}}"#,
             node.id,
             escape_json(&node.label),
             escape_json(&node.full_path),
             node.is_dir,
             node.size,
-            format!("{:?}", node.file_type),
+            node.file_type,
             color,
             pos.x,
             pos.y,
@@ -59,10 +57,7 @@ pub fn render_interactive_html(
         use std::collections::HashMap;
         let mut parent_children: HashMap<usize, Vec<usize>> = HashMap::new();
         for edge in &graph.edges {
-            parent_children
-                .entry(edge.from)
-                .or_default()
-                .push(edge.to);
+            parent_children.entry(edge.from).or_default().push(edge.to);
         }
         let mut first = true;
         for (parent, children) in &parent_children {

@@ -29,7 +29,9 @@ pub fn render_svg(graph: &Graph, layout: &LayoutResult, width: u32, height: u32)
     // Styles
     svg.push_str("  <style>\n");
     svg.push_str("    .edge { stroke: #7878a0; stroke-width: 1.5; stroke-opacity: 0.8; }\n");
-    svg.push_str("    .node { stroke: #fff; stroke-width: 1; stroke-opacity: 0.3; cursor: pointer; }\n");
+    svg.push_str(
+        "    .node { stroke: #fff; stroke-width: 1; stroke-opacity: 0.3; cursor: pointer; }\n",
+    );
     svg.push_str("    .label { font-family: monospace; font-size: 10px; fill: #e0e0e0; pointer-events: none; }\n");
     svg.push_str("    .dir-label { font-family: monospace; font-size: 11px; fill: #fff; font-weight: bold; pointer-events: none; }\n");
     svg.push_str("  </style>\n");
